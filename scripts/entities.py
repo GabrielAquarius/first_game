@@ -20,9 +20,19 @@ class PhysicsEntity:
         self.velocity = [0.0, 0.0] # The derivative of position is velocity and the derivative of velocity is acceleration so the relationships are similiar.
         # To explain, velocity is just used to represent the rate of change in the position and the acceleration will be the rate o change in velocity.
         self.collisions = {'up':False, 'down':False, 'right':False, 'left':False}
+        self.action = ''
+        self.anim_offset = (-3, -3) # A trick to compensate for the variation in sprite size in different animations is to render the images with an offset to account for that padding. So that animations overflow outside of what would normally be the hitbox for the player
+        # TODO: Check if setting a single offset for all animations is sufficient
+        self.flip = False
+        self.set_action('idle')
         
     def rect(self):
         return pygame.Rect(self.pos[0], self.pos[1], self.size[0], self.size[1])
+    
+    def set_action(self, action):
+        if action != self.action:
+            self.action = action
+            self.animation = self.game.assets.animations[self.type][self.action].copy()
     
     def update(self, tilemap, movement=(0, 0)):
         self.collisions = {'up':False, 'down':False, 'right':False, 'left':False}
@@ -59,17 +69,52 @@ class PhysicsEntity:
                     self.collisions['up'] = True
                 self.pos[1] = entity_rect.y
         
+        if movement[0] > 0:
+            self.flip = False
+        if movement[0] < 0:
+            self.flip = True
+        
         self.velocity[1] = min(5, self.velocity[1] + 0.1) # Add gravity (Changing the Y axis)
         # I'm applying the idea of terminal velocity, an object will have a maximum achievable velocity while it's falling when acceleration stops, this happens when the resistance of the medium equals the force of gravity, maintaining the same velocity until the end of the journey.
 
         if self.collisions['down'] or self.collisions['up']:
             self.velocity[1] = 0
-        
+    
+        self.animation.update()
+    
     def render(self, surf, offset=(0, 0)):
-        surf.blit(self.game.assets['player'], (self.pos[0] - offset[0], self.pos[1] - offset[1]))
+        surf.blit(pygame.transform.flip(self.animation.img(), self.flip, False), (self.pos[0] - offset[0] + self.anim_offset[0], (self.pos[1] - offset[1] + self.anim_offset[1]))) 
+        # In my case I always want to flip the X axis, that the reason for the False argument
+        
+        
+        
+        
+        #surf.blit(self.game.assets['player'], (self.pos[0] - offset[0], self.pos[1] - offset[1]))
         # self.screen.blit(self.img, self.img_pos) → blit means (Bit Block Transfer). Essentially, is an operation that copies pixels (a section of memory) from a source surface (such as an image of a character) to a destination surface (such as your game window).
         # In pygame a surface is basically just an image so the window itself has a surface which is the main one render onto that's the screen (the screen itself is a special type of surface)
         # but most surfaces are an image loaded in memory, it's not necessarily represent the screen or something like that. This means that it's possible to blit the screen onto the image.
         # self.img.blit(self.screen, self.img_pos), because they're both surfaces. It's possible to blit any surface onto another surface and then at a given location (it's just merge different images)
         # ⤷ Besides that, when this' executed and the image moves on the screen, there'll be an image being rendered on top of another image that has already been rendered causing a trail effect
         #   To solve this is important to clear the screen every frame (self.screen.fill()). Note: This means that the entire screen is rendered and everything is redrawn from scratch every frame.
+        
+
+class Player(PhysicsEntity): # Different types of entities will have different animation logic yhat's why the player was separated from PhysicsEntity with inheritance.
+    def __init__(self, game, pos, size):
+        super().__init__(game, 'player', pos, size)
+        self.air_time = 0
+        
+    def update(self, tilemap, movement=(0, 0)): 
+        super().update(tilemap, movement=movement)
+    
+        self.air_time += 1
+        if self.collisions['down']:
+            self.air_time = 0
+        
+        if self.air_time > 4:
+            self.set_action('jump_up')
+        elif movement[0] != 0:
+            self.set_action('run')
+        else:
+            self.set_action('idle')
+        
+            

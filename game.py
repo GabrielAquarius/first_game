@@ -2,16 +2,16 @@ import sys
 
 import pygame
 
-from scripts.utils import load_image, load_images
-from scripts.entities import PhysicsEntity
+from scripts.utils import load_image, load_images, Animation
+from scripts.entities import PhysicsEntity, Player
 from scripts.tilemap import Tilemap
+from scripts.assets import Assets
 
 SCREEN_WIDTH = 320
 SCREEN_HEIGHT = 240
 
 class Game:
     def __init__(self):
-
         pygame.init()
 
         pygame.display.set_caption('Metroid Rogue')
@@ -30,20 +30,11 @@ class Game:
         
         self.movement = [False, False]
         
-        self.assets = {
-            'grass_1a': load_images('tiles/grass/grass_1a'),
-            'grass_1b': load_images('tiles/grass/grass_1b'),
-            'dirty_1a': load_images('tiles/dirty/dirty_1a'),
-            'dirty_1b': load_images('tiles/dirty/dirty_1b'),
-            'rock_1a': load_images('tiles/rock/rock_1a'),
-            'rock_1b': load_images('tiles/rock/rock_1b'),
-            'player': load_image('entities/player/idle/0.png'),
-            'background': load_image('/grounds/background/background.png')
-        }
+        self.assets = Assets()
         
-        self.scaled_background = pygame.transform.scale(self.assets['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
+        self.scaled_background = pygame.transform.scale(self.assets.ground['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
         
-        self.player = PhysicsEntity(self, 'player', (50, 50), (8, 15))
+        self.player = Player(self, (50, 50), (10, 12)) # (10, 16) are the dimensions of the player, that is the collision space that PhysicsEntity is considering
         
         self.tilemap = Tilemap(self, tile_size=16)
         
@@ -51,7 +42,6 @@ class Game:
         
     def run(self):
         while True:
-            #self.display.fill((14, 219, 248))
             self.display.blit(self.scaled_background, (0, 0))
             
             self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30 # Creates a smoother movement of the camera

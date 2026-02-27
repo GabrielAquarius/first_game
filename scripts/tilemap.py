@@ -1,20 +1,20 @@
 import json
 import pygame
-# What is better is this case: composition ou inheritance?
+# What is better is this case: composition or inheritance?
 # The rule is simple: inheritance = “is a”, composition = “has a”.
 # So Tilemp has Tiles, not is a Tile
 
 
 TILEMAP_PATH = 'assets/maps'
 NEIGHBOR_OFFSETS = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)] # All collision possibilities that the player entity has
-PHYSICS_TILES = {'grass_1a', 'dirty_1a'} # This is considered a set() in Python, this is faster than a list()
+PHYSICS_TILES = {'grass_1a', 'grass_1b', 'dirty_1a', 'dirty_1b', 'rock_1a', 'rock_1b', 'stone', 'wood'} # This is considered a set() in Python, this is faster than a list()
 
 class Tile:
     def __init__(self, type:str, variant:int, pos:tuple):
         self.type = type
         self.variant = variant
         self.pos = pos
-    
+
     def __repr__(self):
         return f"Tile(type='{self.type}', variant='{self.variant}', pos={self.pos}" # Without this, if I wanted to debug using print, I would only have access to the memory address where the object is located. This way, I can see what this object represents.
 
@@ -50,7 +50,7 @@ class Tilemap:
             if check_loc in self.tilemap:
                 tiles.append(self.tilemap[check_loc])
         return tiles
-    
+
     def physics_rects_around(self, pos):
         rects = []
         for tile in self.tiles_around(pos):
@@ -89,15 +89,14 @@ class Tilemap:
         It's much fast and efficient to determine which tile should be on screen and then only show those tiles. If we know where the camera is we can calculate all the possible positions that could be on screen for the tilemap.
         The ideia is to figure out where the top left tile of the screen should be and then calculate all the tuples going down to the bottom right and everything in between and then we look up those locations and if there is a tile then we render it.
         '''
-        for x in range(offset[0] // self.tile_size, (offset[0] + surf.get_width()) // self.tile_size + 1):
-            pass
-        
         for tile in self.offgrid_tiles:
-            surf.blit(self.game.assets[tile.type][tile.variant], (tile.pos[0] - offset[0], tile.pos[1] - offset[1])) # The concept of a real camera doesn't exist in gaming, once the player moves right everything needs to move to the left.
-        
-        for loc in self.tilemap:
-            tile = self.tilemap[loc]
-            surf.blit(self.game.assets[tile.type][tile.variant], (tile.pos[0] * self.tile_size - offset[0], tile.pos[1] * self.tile_size - offset[1]))
-            # Search the assets dictionary key through tile.type, e.g., ‘grass_1a’, then searches for the value from some index, e.g., 0, which would result in the first image in that folder, i.e., ‘0.png’, 
-            # thus rendering the tile on the displayer, and after upscaling on the screen. In addition, the position in coordinates is converted to the pixel position on the screen, so the positions are multiplied by tile_size (=16).
+            surf.blit(self.game.assets.tile[tile.type][tile.variant], (tile.pos[0] - offset[0], tile.pos[1] - offset[1])) # The concept of a real camera doesn't exist in gaming, once the player moves right everything needs to move to the left.
             
+        for x in range(offset[0] // self.tile_size, (offset[0] + surf.get_width()) // self.tile_size + 1): # Start on the top left edge of the screen and goes to the right edge of the screen (there is an off by one)
+            for y in range(offset[1] // self.tile_size, (offset[1] + surf.get_height()) // self.tile_size + 1): # It's the same for y axis but now vertically, with this the assets will be rendered based on where the camera is
+                loc = (x, y)
+                if loc in self.tilemap:
+                    tile = self.tilemap[loc]
+                    surf.blit(self.game.assets.tile[tile.type][tile.variant], (tile.pos[0] * self.tile_size - offset[0], tile.pos[1] * self.tile_size - offset[1]))
+                    # Search the assets dictionary key through tile.type, e.g., ‘grass_1a’, then searches for the value from some index, e.g., 0, which would result in the first image in that folder, i.e., ‘0.png’, 
+                    # thus rendering the tile on the displayer, and after upscaling on the screen. In addition, the position in coordinates is converted to the pixel position on the screen, so the positions are multiplied by tile_size (=16).
