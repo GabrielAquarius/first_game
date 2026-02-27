@@ -2,31 +2,106 @@ import sys
 
 import pygame
 
-pygame.init()
+from scripts.utils import load_image, load_images
+from scripts.entities import PhysicsEntity
+from scripts.tilemap import Tilemap
 
-pygame.display.set_caption('Metroid Rogue')
+SCREEN_WIDTH = 320
+SCREEN_HEIGHT = 240
 
-game_icon = pygame.image.load('assets/game_icon.png')
+class Game:
+    def __init__(self):
 
-pygame.display.set_icon(game_icon)
+        pygame.init()
 
-screen = pygame.display.set_mode((640, 480)) # Window resolution -- here I will draw everything
+        pygame.display.set_caption('Metroid Rogue')
 
-clock = pygame.time.Clock()
+        game_icon = pygame.image.load('assets/game_icon.png')
+
+        pygame.display.set_icon(game_icon)
+
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH*3, SCREEN_HEIGHT*3)) # Window resolution -- here I will draw everything
+
+        self.display = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT)) # screen = window surface / display = window that render things
+        # The reason for using a separate internal surface is to render the game at a lower native resolution (320 x 240), which ensures consistent pixel art scaling 
+        # and reduces processing overhead. The main screen surface then acts as a container, upscaling the final image to fill the window (960 x 720) without losing the 'chunky' retro aesthetic.
+        
+        self.clock = pygame.time.Clock()
+        
+        self.movement = [False, False]
+        
+        self.assets = {
+            'grass_1a': load_images('tiles/grass/grass_1a'),
+            'grass_1b': load_images('tiles/grass/grass_1b'),
+            'dirty_1a': load_images('tiles/dirty/dirty_1a'),
+            'dirty_1b': load_images('tiles/dirty/dirty_1b'),
+            'rock_1a': load_images('tiles/rock/rock_1a'),
+            'rock_1b': load_images('tiles/rock/rock_1b'),
+            'player': load_image('entities/player/idle/0.png'),
+            'background': load_image('/grounds/background/background.png')
+        }
+        
+        self.scaled_background = pygame.transform.scale(self.assets['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
+        
+        self.player = PhysicsEntity(self, 'player', (50, 50), (8, 15))
+        
+        self.tilemap = Tilemap(self, tile_size=16)
+        
+        self.scroll = [0.0, 0.0]
+        
+    def run(self):
+        while True:
+            #self.display.fill((14, 219, 248))
+            self.display.blit(self.scaled_background, (0, 0))
+            
+            self.scroll[0] += (self.player.rect().centerx - self.display.get_width() / 2 - self.scroll[0]) / 30 # Creates a smoother movement of the camera
+            # If the camera is placed directly onto the player's location, the player would end up in the top left of the screen. The player needs to be in the center of the screen,
+            # so it's necessary to subtract part of the screen size so that the camera os positioned in a way where the center of what you can see is on the player.
+            self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
+            
+            render_scroll = (int(self.scroll[0]), int(self.scroll[1])) # Without this, when the player jumps, they will flicker because the camera will result in a float.
+            
+            for i in range(10):
+                self.tilemap.add((3 + i, 10), 'grass_1a', 1)
+                self.tilemap.add((10, 5 + i), 'dirty_1a', 1)
+            
+            self.tilemap.render(self.display, offset=render_scroll) # The movement of the camera could seems a little bit choppy, to solve this it'll be necessary work with subpixels (I do'nt know)
+            
+            self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+            self.player.render(self.display, offset=render_scroll)
+            
+            for event in pygame.event.get(): # Gets the input and interacts with Windows
+                if event.type == pygame.QUIT: # Each 'event' has a type attribute that can specifies what type of event it is
+                    pygame.quit() # Close pygame window
+                    sys.exit() # Exit the application as a whole
+                if event.type == pygame.KEYDOWN: # This conditions checks if ANY key in keyboard Windows is pressed down 
+                    if event.key == pygame.K_LEFT: # Checks if '←' is pressed
+                        self.movement[0] = True
+                    if event.key == pygame.K_RIGHT: # Checks if '→' is pressed
+                        self.movement[1] = True
+                    if event.key == pygame.K_UP: # Checks if '↑' is pressed 
+                        self.player.velocity[1] = -3
+                    if event.key == pygame.K_DOWN: # Checks if '↓' is pressed
+                        pass
+                if event.type == pygame.KEYUP: # This conditions checks if ANY key in keyboard Windows is unpressed 
+                    if event.key == pygame.K_LEFT: # Checks if '←' is unpressed
+                        self.movement[0] = False
+                    if event.key == pygame.K_RIGHT: # Checks if '→' is unpressed
+                        self.movement[1] = False
+                    if event.key == pygame.K_UP: # Checks if '↑' is unpressed
+                        pass
+                    if event.key == pygame.K_DOWN: # Checks if '↓' is unpressed
+                        pass
+            
+            self.screen.blit(pygame.transform.scale(self.display, self.screen.get_size())) # Scale the size of the display to the size of the screen 
+            pygame.display.update() # If I don't call this function, I won't see anything changing on the screen
+
+            self.clock.tick(60) # Force the loop to run at 60 FPS
 
 
-while True:
-    for event in pygame.event.get(): # Gets the input and interacts with Windows
-        if event.type == pygame.QUIT: # Each 'event' has a type attribute that can specifies what type of event it is
-            pygame.quit() # Close pygame window
-            sys.exit() # Exit the application as a whole
-    
-    pygame.display.update() # If I don't call this function, I won't see anything changing on the screen
-    
-    clock.tick(60) # Force the loop to run at 60 FPS
-    
-    
-    
+
+if __name__ == '__main__':
+    Game().run()
     
     
     
