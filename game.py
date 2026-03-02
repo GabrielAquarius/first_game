@@ -34,11 +34,13 @@ class Game:
         
         self.scaled_background = pygame.transform.scale(self.assets.ground['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
         
-        self.player = Player(self, (50, 50), (10, 12)) # (10, 16) are the dimensions of the player, that is the collision space that PhysicsEntity is considering
+        self.player = Player(self, (155, -165), (10, 12)) # (10, 16) are the dimensions of the player, that is the collision space that PhysicsEntity is considering
         
         self.tilemap = Tilemap(self, tile_size=16)
         
         self.scroll = [0.0, 0.0]
+        
+        self.tilemap.load('map.json')
         
     def run(self):
         while True:
@@ -66,7 +68,7 @@ class Game:
                     if event.key == pygame.K_RIGHT: # Checks if '→' is pressed
                         self.movement[1] = True
                     if event.key == pygame.K_UP: # Checks if '↑' is pressed 
-                        self.player.velocity[1] = -3
+                        self.player.jump_up()
                     if event.key == pygame.K_DOWN: # Checks if '↓' is pressed
                         pass
                 if event.type == pygame.KEYUP: # This conditions checks if ANY key in keyboard Windows is unpressed 
