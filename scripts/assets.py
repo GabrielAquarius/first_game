@@ -3,6 +3,10 @@ import pygame
 
 from .utils import load_image, load_images, Animation
 
+# TODO: Automatize the process of create this Assetes class
+# TODO: Automatize the process of organize the directory of assets
+# TODO: Automatize the rename process from any name to the sequence of 0 to n png files
+
 class Assets:
     def __init__(self):
         self.ground = {

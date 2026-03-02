@@ -51,10 +51,6 @@ class Game:
             
             render_scroll = (int(self.scroll[0]), int(self.scroll[1])) # Without this, when the player jumps, they will flicker because the camera will result in a float.
             
-            for i in range(10):
-                self.tilemap.add((3 + i, 10), 'grass_1a', 1)
-                self.tilemap.add((10, 5 + i), 'dirty_1a', 1)
-            
             self.tilemap.render(self.display, offset=render_scroll) # The movement of the camera could seems a little bit choppy, to solve this it'll be necessary work with subpixels (I do'nt know)
             
             self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))

@@ -4,10 +4,22 @@ import pygame
 # The rule is simple: inheritance = “is a”, composition = “has a”.
 # So Tilemp has Tiles, not is a Tile
 
+AUTOTILE_MAP = { # It's not possible to use a list as key, so it's necessary to use a tuple
+    tuple(sorted([(1, 0), (0, 1)])): 0, # The top left should be placed if there's a tile to your right and a tile below 
+    tuple(sorted([(1, 0), (-1, 0), (0, 1)])): 1, # The top middle should be placed if there's a tile to your right, a tile below and a tile on the left
+    tuple(sorted([(-1, 0), (0, 1)])): 2, # The top right should be placed if there's a tile to your left and a tile below
+    tuple(sorted([(1, 0), (0, -1), (0, 1)])): 3, # The mid left should be placed if there's a tile to your right, a tile below and a tile above
+    tuple(sorted([(1, 0), (-1, 0), (0, 1), (0, -1)])): 4, # The mid middle should be placed if there's tiles in any direction
+    tuple(sorted([(-1, 0), (0, -1), (0, 1)])): 5, # The mid right should be placed if there's a tile to your left, a tile below and a tile above
+    tuple(sorted([(1, 0), (0, -1)])): 6, # The bottom left should be placed if there's a tile to your right and a tile above
+    tuple(sorted([(1, 0), (-1, 0), (0, -1)])): 7, # The bottom middle should be placed if there's a tile to your right, a tile to the left and a tile above
+    tuple(sorted([(-1, 0), (0, -1)])): 8, # The bottom right should be placed if there's a tile to your left and a tile above
+}
 
 TILEMAP_PATH = 'assets/maps'
 NEIGHBOR_OFFSETS = [(-1, 0), (-1, -1), (0, -1), (1, -1), (1, 0), (0, 0), (-1, 1), (0, 1), (1, 1)] # All collision possibilities that the player entity has
-PHYSICS_TILES = {'grass_1a', 'grass_1b', 'dirty_1a', 'dirty_1b', 'rock_1a', 'rock_1b', 'stone', 'wood'} # This is considered a set() in Python, this is faster than a list()
+PHYSICS_TILES = {'grass_1a', 'grass_1b', 'grass_plataform', 'dirty_1a', 'dirty_1b', 'dirty_plataform', 'rock_1a', 'rock_1b', 'stone', 'wood'} # This is considered a set() in Python, this is faster than a list()
+AUTOTILE_TYPES = {'grass_1a', 'grass_1b', 'dirty_1a', 'dirty_1b', 'rock_1a', 'rock_1b'}
 
 class Tile:
     def __init__(self, type:str, variant:int, pos:tuple):
@@ -16,14 +28,14 @@ class Tile:
         self.pos = pos
 
     def __repr__(self):
-        return f"Tile(type='{self.type}', variant='{self.variant}', pos={self.pos}" # Without this, if I wanted to debug using print, I would only have access to the memory address where the object is located. This way, I can see what this object represents.
+        return f"Tile(type='{self.type}', variant='{self.variant}', pos={self.pos})" # Without this, if I wanted to debug using print, I would only have access to the memory address where the object is located. This way, I can see what this object represents.
 
     def to_dict(self):
         return {'type': self.type, 'variant': self.variant, 'pos': list(self.pos)}
 
     @staticmethod
     def from_dict(data:dict):
-        return Tile(data['type'], data['variant'], tuple([data['pos']]))
+        return Tile(data['type'], data['variant'], tuple(data['pos']))
     
     def rect(self, tile_size):
         return pygame.Rect(self.pos[0] * tile_size, self.pos[1] * tile_size, tile_size, tile_size) # shortcut to 
@@ -58,6 +70,20 @@ class Tilemap:
                 rects.append(tile.rect(self.tile_size))
         return rects
 
+    def autotile(self):
+        for loc in self.tilemap:
+            tile = self.tilemap[loc]
+            neighbors = set()
+            for shift in [(1, 0), (-1, 0), (0, -1), (0, 1)]:
+                check_loc = (tile.pos[0] + shift[0], tile.pos[1] + shift[1])
+                if check_loc in self.tilemap:
+                    if self.tilemap[check_loc].type == tile.type: # Check if the neighboring tile the same type as the tile itself (I don't want to autocomplete 'grass' with 'dirty')
+                        neighbors.add(shift)
+            neighbors = tuple(sorted(neighbors))
+            if (tile.type in AUTOTILE_TYPES) and (neighbors in AUTOTILE_MAP):
+                tile.variant = AUTOTILE_MAP[neighbors]
+
+                
     def add(self, pos, type, variant):
         self.tilemap[pos] = Tile(type, variant, pos)
         
@@ -70,7 +96,8 @@ class Tilemap:
     def save(self, path):
         data = {
             'tile_size': self.tile_size,
-            'tilemap': {f'{x};{y}': tile.to_dict() for (x, y), tile in self.tilemap.items()}
+            'tilemap': {f'{x};{y}': tile.to_dict() for (x, y), tile in self.tilemap.items()},
+            'offgrid_tiles': [tile.to_dict() for tile in self.offgrid_tiles]
         }
         with open(f'{TILEMAP_PATH}/{path}', 'w') as file:
             json.dump(data, file, indent=2)
@@ -83,6 +110,7 @@ class Tilemap:
         for key, tile_data in data['tilemap'].items():
             x, y = map(int, key.split(';'))
             self.tilemap[(x, y)] = Tile.from_dict(tile_data)
+        self.offgrid_tiles = [Tile.from_dict(tile_data) for tile_data in data.get('offgrid_tiles', [])]
     
     def render(self, surf, offset=(0, 0)):
         '''
