@@ -111,6 +111,21 @@ class Tilemap:
             x, y = map(int, key.split(';'))
             self.tilemap[(x, y)] = Tile.from_dict(tile_data)
         self.offgrid_tiles = [Tile.from_dict(tile_data) for tile_data in data.get('offgrid_tiles', [])]
+
+        self.update_boundaries()
+        
+    def update_boundaries(self):
+        self.min_x = min(self.tilemap.keys(), key=lambda x: x[0])[0] # Returns a tuple like this (1, 4) but I only want min or max between 
+        self.max_x = max(self.tilemap.keys(), key=lambda x: x[0])[0]
+        self.min_y = min(self.tilemap.keys(), key=lambda x: x[1])[1]
+        self.max_y = max(self.tilemap.keys(), key=lambda x: x[1])[1]
+        
+        self.map_bounds = {
+            'left': self.min_x * self.tile_size,
+            'right': (self.max_x + 1) * self.tile_size, # Add +1 to max values so the boundary is at the FAR edge of the tile
+            'top': self.min_y * self.tile_size,
+            'bottom': (self.max_y + 1) * self.tile_size
+        }
     
     def render(self, surf, offset=(0, 0)):
         '''
@@ -119,7 +134,7 @@ class Tilemap:
         '''
         for tile in self.offgrid_tiles:
             surf.blit(self.game.assets.tile[tile.type][tile.variant], (tile.pos[0] - offset[0], tile.pos[1] - offset[1])) # The concept of a real camera doesn't exist in gaming, once the player moves right everything needs to move to the left.
-            
+        
         for x in range(offset[0] // self.tile_size, (offset[0] + surf.get_width()) // self.tile_size + 1): # Start on the top left edge of the screen and goes to the right edge of the screen (there is an off by one)
             for y in range(offset[1] // self.tile_size, (offset[1] + surf.get_height()) // self.tile_size + 1): # It's the same for y axis but now vertically, with this the assets will be rendered based on where the camera is
                 loc = (x, y)

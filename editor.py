@@ -35,7 +35,7 @@ class Editor:
         self.tilemap = Tilemap(self, tile_size=16)
         
         try:        
-            self.tilemap.load('map.json')
+            self.tilemap.load('area_0/map_end.json')
         except FileNotFoundError:
             pass
         
@@ -134,7 +134,7 @@ class Editor:
                     if event.key == pygame.K_t:
                         self.tilemap.autotile()
                     if event.key == pygame.K_o:
-                        self.tilemap.save('map.json')
+                        self.tilemap.save('area_0/map_end.json')
                     if event.key == pygame.K_LSHIFT:
                         self.shift = True
                 if event.type == pygame.KEYUP: # This conditions checks if ANY key in keyboard Windows is unpressed 

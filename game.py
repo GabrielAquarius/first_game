@@ -5,6 +5,7 @@ import pygame
 from scripts.utils import load_image, load_images, Animation
 from scripts.entities import PhysicsEntity, Player
 from scripts.tilemap import Tilemap
+from scripts.map_system import MapSystem
 from scripts.assets import Assets
 
 SCREEN_WIDTH = 320
@@ -33,14 +34,15 @@ class Game:
         self.assets = Assets()
         
         self.scaled_background = pygame.transform.scale(self.assets.ground['background'], (SCREEN_WIDTH, SCREEN_HEIGHT))
-        
-        self.player = Player(self, (155, -165), (10, 12)) # (10, 16) are the dimensions of the player, that is the collision space that PhysicsEntity is considering
-        
+
+        self.player = Player(self, (155, -165), (10, 13)) # (10, 12) are the dimensions of the player, that is the collision space that PhysicsEntity is considering
+
         self.tilemap = Tilemap(self, tile_size=16)
         
         self.scroll = [0.0, 0.0]
         
-        self.tilemap.load('map.json')
+        self.map_system = MapSystem(self)
+        self.tilemap.load('area_0/map_start.json')
         
     def run(self):
         while True:
@@ -51,11 +53,16 @@ class Game:
             # so it's necessary to subtract part of the screen size so that the camera os positioned in a way where the center of what you can see is on the player.
             self.scroll[1] += (self.player.rect().centery - self.display.get_height() / 2 - self.scroll[1]) / 30
             
+            # Boundary Detection (Clamp the scroll at a certain point)
+            self.scroll[0] = max(self.tilemap.map_bounds['left'], min(self.scroll[0], self.tilemap.map_bounds['right'] - self.display.get_width()))
+            self.scroll[1] = max(self.tilemap.map_bounds['top'], min(self.scroll[1], self.tilemap.map_bounds['bottom'] - self.display.get_height()))
+            
             render_scroll = (int(self.scroll[0]), int(self.scroll[1])) # Without this, when the player jumps, they will flicker because the camera will result in a float.
             
             self.tilemap.render(self.display, offset=render_scroll) # The movement of the camera could seems a little bit choppy, to solve this it'll be necessary work with subpixels (I do'nt know)
             
             self.player.update(self.tilemap, (self.movement[1] - self.movement[0], 0))
+            self.map_system.update()
             self.player.render(self.display, offset=render_scroll)
             
             for event in pygame.event.get(): # Gets the input and interacts with Windows
